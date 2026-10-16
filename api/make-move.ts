@@ -1,7 +1,88 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import type { Transaction } from 'firebase-admin/firestore';
+import { getApps, initializeApp, cert, type App } from 'firebase-admin/app';
+import { getFirestore, type Firestore, type Transaction } from 'firebase-admin/firestore';
 import { Chess } from 'chess.js';
-import { getAdminDb, authenticateRequest } from '../src/lib/server-admin';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
+
+const FIREBASE_JWKS_URL = 'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
+const jwks = createRemoteJWKSet(new URL(FIREBASE_JWKS_URL));
+
+function cleanEnv(val: unknown): string {
+  if (typeof val !== 'string') return '';
+  let trimmed = val.trim();
+  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    trimmed = trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
+function formatPrivateKey(rawKey: string): string {
+  let key = cleanEnv(rawKey);
+  if (!key.startsWith('-----BEGIN') && !key.includes('BEGIN PRIVATE KEY')) {
+    try {
+      const decoded = Buffer.from(key, 'base64').toString('utf-8');
+      if (decoded.includes('BEGIN PRIVATE KEY')) key = decoded;
+    } catch {}
+  }
+  if (key.includes('\\n')) key = key.replace(/\\n/g, '\n');
+  return key;
+}
+
+let app: App | null = null;
+let db: Firestore | null = null;
+
+function getDb(): Firestore {
+  if (!db) {
+    const existing = getApps();
+    if (existing.length > 0) {
+      app = existing[0];
+    } else {
+      const projectId = cleanEnv(process.env.FIREBASE_PROJECT_ID);
+      const clientEmail = cleanEnv(process.env.FIREBASE_CLIENT_EMAIL);
+      const rawKey = process.env.FIREBASE_PRIVATE_KEY || '';
+      const privateKey = formatPrivateKey(rawKey);
+
+      app = initializeApp({
+        credential: cert({
+          projectId,
+          clientEmail,
+          privateKey,
+        }),
+      });
+    }
+    db = getFirestore(app);
+  }
+  return db;
+}
+
+async function authenticateRequest(req: VercelRequest): Promise<{ uid: string; email?: string }> {
+  const authHeader = req.headers.authorization || req.headers.Authorization;
+  if (!authHeader || typeof authHeader !== 'string') {
+    throw new Error('Thiếu header Authorization xác thực');
+  }
+
+  const parts = authHeader.split(' ');
+  if (parts.length !== 2 || parts[0].toLowerCase() !== 'bearer') {
+    throw new Error('Định dạng token không đúng (Yêu cầu: Bearer <ID_TOKEN>)');
+  }
+
+  const idToken = parts[1];
+  const projectId = cleanEnv(process.env.FIREBASE_PROJECT_ID);
+  if (!projectId) {
+    throw new Error('Máy chủ chưa nhận được biến môi trường FIREBASE_PROJECT_ID');
+  }
+
+  const { payload } = await jwtVerify(idToken, jwks, {
+    issuer: `https://securetoken.google.com/${projectId}`,
+    audience: projectId,
+  });
+
+  if (!payload.sub) {
+    throw new Error('Token không chứa user id hợp lệ');
+  }
+
+  return { uid: payload.sub, email: payload.email as string | undefined };
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -16,10 +97,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ success: false, message: 'Thiếu dữ liệu nước đi hoặc mã phòng' });
     }
 
-    const adminDb = getAdminDb();
+    const adminDb = getDb();
     const roomRef = adminDb.collection('rooms').doc(roomId.trim());
 
-    // Sử dụng Firestore Transaction để xác thực và cập nhật nguyên tử (tránh race-condition khi 2 bên gửi liên tiếp)
     const result = await adminDb.runTransaction(async (transaction: Transaction) => {
       const doc = await transaction.get(roomRef);
       if (!doc.exists) {
@@ -28,7 +108,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const room = doc.data()!;
 
-      // 1. Kiểm tra trạng thái ván đấu
       if (room.status !== 'in_progress') {
         if (room.status === 'waiting') {
           throw new Error('Ván đấu chưa bắt đầu vì đang chờ người chơi thứ hai.');
@@ -36,7 +115,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         throw new Error(`Ván đấu đã kết thúc với trạng thái: ${room.status}.`);
       }
 
-      // 2. Xác định vai trò của người chơi (Bên Trắng hay Bên Đen)
       const whiteUid = room.players?.white?.uid;
       const blackUid = room.players?.black?.uid;
 
@@ -49,12 +127,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         throw new Error('BẠN_LÀ_KHÁN_GIẢ: Chỉ 2 kỳ thủ chính thức mới có quyền thực hiện nước đi.');
       }
 
-      // 3. Kiểm tra đúng lượt đi
       if (room.turn !== playerColor) {
         throw new Error(`Chưa tới lượt của bạn! Hiện tại đang là lượt của bên ${room.turn === 'w' ? 'Trắng' : 'Đen'}.`);
       }
 
-      // 4. Kiểm tra tính hợp lệ của nước đi bằng chess.js trên server
       const chess = new Chess(room.fen);
       let moveResult;
       try {
@@ -71,13 +147,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         throw new Error('NƯỚC_ĐI_SAI_LUẬT: Nước đi không hợp lệ theo luật cờ vua quốc tế.');
       }
 
-      // 5. Xác định trạng thái kết thúc ván (Chiếu bí, Hòa cờ, ...)
       let newStatus = 'in_progress';
       let winner: 'w' | 'b' | 'draw' | null = null;
 
       if (chess.isCheckmate()) {
         newStatus = 'checkmate';
-        winner = playerColor; // Người vừa thực hiện nước đi chiếu bí là người chiến thắng
+        winner = playerColor;
       } else if (chess.isStalemate()) {
         newStatus = 'stalemate';
         winner = 'draw';
@@ -98,7 +173,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const history = Array.isArray(room.history) ? [...room.history, moveRecord] : [moveRecord];
 
-      // 6. Cập nhật dữ liệu vào Firestore trong Transaction
       transaction.update(roomRef, {
         fen: chess.fen(),
         turn: chess.turn(),
