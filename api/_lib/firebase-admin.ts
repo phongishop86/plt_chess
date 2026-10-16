@@ -1,5 +1,4 @@
 import { getApps, initializeApp, cert, type App } from 'firebase-admin/app';
-import { getAuth, type Auth } from 'firebase-admin/auth';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 
 function cleanEnv(val: unknown): string {
@@ -33,11 +32,10 @@ function formatPrivateKey(rawKey: string): string {
 }
 
 let app: App | null = null;
-let adminAuthInstance: Auth | null = null;
 let adminDbInstance: Firestore | null = null;
 
-export function getAdminServices(): { adminAuth: Auth; adminDb: Firestore } {
-  if (!app) {
+export function getAdminDb(): Firestore {
+  if (!adminDbInstance) {
     const existing = getApps();
     if (existing.length > 0) {
       app = existing[0];
@@ -54,7 +52,7 @@ export function getAdminServices(): { adminAuth: Auth; adminDb: Firestore } {
         if (!privateKey) missing.push('FIREBASE_PRIVATE_KEY');
 
         throw new Error(
-          `Vercel Function thiếu biến môi trường: ${missing.join(', ')}. Hãy kiểm tra Settings ➜ Environment Variables trên Vercel (chọn môi trường Production).`
+          `Vercel Serverless Function thiếu biến môi trường: ${missing.join(', ')}. Hãy kiểm tra Settings ➜ Environment Variables trên Vercel (chọn môi trường Production).`
         );
       }
 
@@ -67,12 +65,8 @@ export function getAdminServices(): { adminAuth: Auth; adminDb: Firestore } {
       });
     }
 
-    adminAuthInstance = getAuth(app);
     adminDbInstance = getFirestore(app);
   }
 
-  return {
-    adminAuth: adminAuthInstance!,
-    adminDb: adminDbInstance!,
-  };
+  return adminDbInstance;
 }

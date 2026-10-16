@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
-import { getAdminServices } from './_lib/firebase-admin';
+import { getAdminDb } from './_lib/firebase-admin';
 import { authenticateRequest } from './_lib/auth';
 
 const INITIAL_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -15,7 +15,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const user = await authenticateRequest(req);
 
     // 2. Lấy đối tượng Firestore chuẩn
-    const { adminDb } = getAdminServices();
+    const adminDb = getAdminDb();
 
     // 3. Sinh mã phòng ngẫu nhiên gồm 7 ký tự dễ nhớ
     const roomId = crypto.randomBytes(4).toString('hex').slice(0, 7);

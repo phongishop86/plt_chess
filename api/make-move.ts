@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type { Transaction } from 'firebase-admin/firestore';
 import { Chess } from 'chess.js';
-import { getAdminServices } from './_lib/firebase-admin';
+import { getAdminDb } from './_lib/firebase-admin';
 import { authenticateRequest } from './_lib/auth';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -17,7 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ success: false, message: 'Thiếu dữ liệu nước đi hoặc mã phòng' });
     }
 
-    const { adminDb } = getAdminServices();
+    const adminDb = getAdminDb();
     const roomRef = adminDb.collection('rooms').doc(roomId.trim());
 
     // Sử dụng Firestore Transaction để xác thực và cập nhật nguyên tử (tránh race-condition khi 2 bên gửi liên tiếp)
