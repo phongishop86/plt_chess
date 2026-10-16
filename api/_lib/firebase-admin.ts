@@ -2,6 +2,15 @@ import { getApps, initializeApp, cert, getApp, type App } from 'firebase-admin/a
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 
+function cleanEnv(val: unknown): string {
+  if (typeof val !== 'string') return '';
+  const trimmed = val.trim();
+  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
 // Khởi tạo Firebase Admin SDK Singleton
 // Sử dụng các biến môi trường server-side an toàn, không lộ ra client
 
@@ -10,9 +19,9 @@ function initFirebaseAdmin(): App {
     return getApp();
   }
 
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+  const projectId = cleanEnv(process.env.FIREBASE_PROJECT_ID);
+  const clientEmail = cleanEnv(process.env.FIREBASE_CLIENT_EMAIL);
+  let privateKey = cleanEnv(process.env.FIREBASE_PRIVATE_KEY);
 
   if (!projectId || !clientEmail || !privateKey) {
     console.warn(

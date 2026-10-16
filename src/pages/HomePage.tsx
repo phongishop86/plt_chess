@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Crown, ArrowRight, ShieldCheck, Zap, Sparkles, AlertCircle } from 'lucide-react';
 import { createRoom } from '../lib/api.ts';
-import { isFirebaseConfigured } from '../lib/firebase.ts';
+import { isFirebaseConfigured, missingKeys } from '../lib/firebase.ts';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -52,11 +52,15 @@ export const HomePage: React.FC = () => {
         <div className="mb-8 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-left flex items-start gap-3 shadow-lg">
           <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
           <div className="text-sm">
-            <h4 className="font-bold text-amber-200">Chưa thiết lập biến môi trường Firebase!</h4>
+            <h4 className="font-bold text-amber-200">Chưa nhận được biến môi trường Firebase!</h4>
             <p className="mt-1 text-slate-300 text-xs">
-              Vui lòng tạo file <code className="text-amber-400 bg-slate-900 px-1 py-0.5 rounded">.env.local</code> dựa trên mẫu{' '}
-              <code className="text-amber-400 bg-slate-900 px-1 py-0.5 rounded">.env.example</code> và điền thông số Firebase của bạn trước khi tạo phòng.
+              Nếu đang xem trên Vercel, vui lòng vào <strong>Settings ➜ Environment Variables</strong>, chỉnh sửa các biến để tích chọn môi trường <strong>Production</strong> rồi bấm <strong>Redeploy</strong>.
             </p>
+            {missingKeys.length > 0 && (
+              <p className="mt-2 text-xs font-mono text-amber-400 bg-slate-900/80 p-2 rounded-lg border border-amber-500/20">
+                Đang thiếu: {missingKeys.join(', ')}
+              </p>
+            )}
           </div>
         </div>
       )}

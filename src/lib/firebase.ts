@@ -8,14 +8,27 @@ import {
 } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 
+function cleanEnv(val: unknown): string {
+  if (typeof val !== 'string') return '';
+  const trimmed = val.trim();
+  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
+  apiKey: cleanEnv(import.meta.env.VITE_FIREBASE_API_KEY),
+  authDomain: cleanEnv(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN),
+  projectId: cleanEnv(import.meta.env.VITE_FIREBASE_PROJECT_ID),
+  storageBucket: cleanEnv(import.meta.env.VITE_FIREBASE_STORAGE_BUCKET),
+  messagingSenderId: cleanEnv(import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID),
+  appId: cleanEnv(import.meta.env.VITE_FIREBASE_APP_ID),
 };
+
+export const missingKeys = Object.entries(firebaseConfig)
+  .filter(([_, v]) => !v)
+  .map(([k]) => `VITE_FIREBASE_${k.replace(/([A-Z])/g, '_$1').toUpperCase()}`);
 
 export const isFirebaseConfigured = Boolean(
   firebaseConfig.apiKey && 
@@ -28,9 +41,13 @@ let auth: Auth | null = null;
 let db: Firestore | null = null;
 
 if (isFirebaseConfigured) {
-  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-  auth = getAuth(app);
-  db = getFirestore(app);
+  try {
+    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+    auth = getAuth(app);
+    db = getFirestore(app);
+  } catch (err) {
+    console.error('[Firebase Init Error]:', err);
+  }
 } else {
   console.warn(
     '[Phong Chess] Chưa cấu hình thông số Firebase trong .env. Vui lòng thiết lập VITE_FIREBASE_*.'
@@ -45,7 +62,9 @@ export { auth, db };
  */
 export async function ensureAnonymousUser(): Promise<User> {
   if (!auth) {
-    throw new Error('Firebase Auth chưa được khởi tạo. Vui lòng kiểm tra file cấu hình .env');
+    throw new Error(
+      'Firebase Auth chưa được khởi tạo. Các biến môi trường VITE_FIREBASE_* chưa được nạp vào bản build Vercel. Vui lòng kiểm tra tab Environment Variables trên Vercel.'
+    );
   }
 
   return new Promise((resolve, reject) => {
