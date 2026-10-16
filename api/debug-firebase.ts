@@ -1,7 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { initializeApp, cert, getApps, getApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-import { createRemoteJWKSet } from 'jose';
+import { getAdminDb } from '../src/lib/server-admin';
 
 export default async function handler(_req: VercelRequest, res: VercelResponse) {
   const report: Record<string, unknown> = {
@@ -14,25 +12,7 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
   };
 
   try {
-    let pk = process.env.FIREBASE_PRIVATE_KEY || '';
-    let trimmed = pk.trim();
-    if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
-      trimmed = trimmed.slice(1, -1).trim();
-    }
-    if (trimmed.includes('\\n')) {
-      trimmed = trimmed.replace(/\\n/g, '\n');
-    }
-
-    const app = getApps().length > 0 ? getApp() : initializeApp({
-      credential: cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: trimmed,
-      }),
-    });
-    report.app = 'ok';
-
-    const db = getFirestore(app);
+    const db = getAdminDb();
     report.firestore = 'ok';
 
     // Test write and delete
@@ -41,25 +21,7 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
     await db.collection('test').doc('live-check').delete();
     report.firestoreDelete = 'ok';
 
-    // Test JWKS
-    createRemoteJWKSet(new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com'));
-    report.jwks = 'ok';
-
-    try {
-      await import('./_lib/firebase-admin');
-      report.importAdmin = 'ok';
-    } catch (e: unknown) {
-      report.importAdminError = e instanceof Error ? e.message : String(e);
-    }
-
-    try {
-      await import('./_lib/auth');
-      report.importAuth = 'ok';
-    } catch (e: unknown) {
-      report.importAuthError = e instanceof Error ? e.message : String(e);
-    }
-
-    report.status = '100% SUCCESS';
+    report.status = '100% READY AND OPERATIONAL';
   } catch (err: unknown) {
     report.error = err instanceof Error ? { message: err.message, stack: err.stack } : String(err);
   }

@@ -1,7 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type { Transaction } from 'firebase-admin/firestore';
-import { getAdminDb } from './_lib/firebase-admin';
-import { authenticateRequest } from './_lib/auth';
+import { getAdminDb, authenticateRequest } from '../src/lib/server-admin';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
