@@ -1,5 +1,5 @@
 import type { VercelRequest } from '@vercel/node';
-import { adminAuth } from './firebase-admin';
+import { getAdminServices } from './firebase-admin';
 
 export interface AuthenticatedUser {
   uid: string;
@@ -25,6 +25,7 @@ export async function authenticateRequest(req: VercelRequest): Promise<Authentic
   const idToken = parts[1];
 
   try {
+    const { adminAuth } = getAdminServices();
     const decodedToken = await adminAuth.verifyIdToken(idToken);
     return {
       uid: decodedToken.uid,

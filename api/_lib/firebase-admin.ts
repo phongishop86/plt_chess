@@ -13,7 +13,7 @@ function cleanEnv(val: unknown): string {
 
 function formatPrivateKey(rawKey: string): string {
   let key = cleanEnv(rawKey);
-  
+
   // Hỗ trợ nếu khóa được mã hóa Base64
   if (!key.startsWith('-----BEGIN') && !key.includes('BEGIN PRIVATE KEY')) {
     try {
@@ -32,13 +32,15 @@ function formatPrivateKey(rawKey: string): string {
   return key;
 }
 
-let cachedApp: App | null = null;
+let app: App | null = null;
+let adminAuthInstance: Auth | null = null;
+let adminDbInstance: Firestore | null = null;
 
-export function getFirebaseAdmin(): { adminAuth: Auth; adminDb: Firestore } {
-  if (!cachedApp) {
+export function getAdminServices(): { adminAuth: Auth; adminDb: Firestore } {
+  if (!app) {
     const existing = getApps();
     if (existing.length > 0) {
-      cachedApp = existing[0];
+      app = existing[0];
     } else {
       const projectId = cleanEnv(process.env.FIREBASE_PROJECT_ID);
       const clientEmail = cleanEnv(process.env.FIREBASE_CLIENT_EMAIL);
@@ -52,11 +54,11 @@ export function getFirebaseAdmin(): { adminAuth: Auth; adminDb: Firestore } {
         if (!privateKey) missing.push('FIREBASE_PRIVATE_KEY');
 
         throw new Error(
-          `Vercel Serverless Function thiếu biến môi trường: ${missing.join(', ')}. Vui lòng kiểm tra tab Environment Variables trên Vercel và đảm bảo đã bật môi trường Production.`
+          `Vercel Function thiếu biến môi trường: ${missing.join(', ')}. Hãy kiểm tra Settings ➜ Environment Variables trên Vercel (chọn môi trường Production).`
         );
       }
 
-      cachedApp = initializeApp({
+      app = initializeApp({
         credential: cert({
           projectId,
           clientEmail,
@@ -64,29 +66,13 @@ export function getFirebaseAdmin(): { adminAuth: Auth; adminDb: Firestore } {
         }),
       });
     }
+
+    adminAuthInstance = getAuth(app);
+    adminDbInstance = getFirestore(app);
   }
 
   return {
-    adminAuth: getAuth(cachedApp),
-    adminDb: getFirestore(cachedApp),
+    adminAuth: adminAuthInstance!,
+    adminDb: adminDbInstance!,
   };
 }
-
-// Dùng Proxy để lazy-init an toàn, không làm sập serverless container lúc khởi động
-export const adminAuth: Auth = new Proxy({} as Auth, {
-  get(_, prop) {
-    const { adminAuth } = getFirebaseAdmin();
-    const val = (adminAuth as unknown as Record<string | symbol, unknown>)[prop];
-    return typeof val === 'function' ? val.bind(adminAuth) : val;
-  },
-});
-
-export const adminDb: Firestore = new Proxy({} as Firestore, {
-  get(_, prop) {
-    const { adminDb } = getFirebaseAdmin();
-    const val = (adminDb as unknown as Record<string | symbol, unknown>)[prop];
-    return typeof val === 'function' ? val.bind(adminDb) : val;
-  },
-});
-
-export default adminAuth;

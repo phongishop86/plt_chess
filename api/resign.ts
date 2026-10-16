@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type { Transaction } from 'firebase-admin/firestore';
-import { adminDb } from './_lib/firebase-admin';
+import { getAdminServices } from './_lib/firebase-admin';
 import { authenticateRequest } from './_lib/auth';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -16,6 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ success: false, message: 'Thiếu mã phòng' });
     }
 
+    const { adminDb } = getAdminServices();
     const roomRef = adminDb.collection('rooms').doc(roomId.trim());
 
     await adminDb.runTransaction(async (transaction: Transaction) => {
