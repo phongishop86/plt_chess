@@ -45,6 +45,20 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
     createRemoteJWKSet(new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com'));
     report.jwks = 'ok';
 
+    try {
+      await import('./_lib/firebase-admin');
+      report.importAdmin = 'ok';
+    } catch (e: unknown) {
+      report.importAdminError = e instanceof Error ? e.message : String(e);
+    }
+
+    try {
+      await import('./_lib/auth');
+      report.importAuth = 'ok';
+    } catch (e: unknown) {
+      report.importAuthError = e instanceof Error ? e.message : String(e);
+    }
+
     report.status = '100% SUCCESS';
   } catch (err: unknown) {
     report.error = err instanceof Error ? { message: err.message, stack: err.stack } : String(err);
