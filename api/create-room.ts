@@ -127,7 +127,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Lỗi hệ thống';
-    return res.status(error instanceof Error && error.message.includes('Xác thực') ? 401 : 500).json({
+    const isAuthError = message.toLowerCase().includes('xác thực') || message.toLowerCase().includes('authorization');
+    return res.status(isAuthError ? 401 : 500).json({
       success: false,
       message,
     });

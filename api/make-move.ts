@@ -207,8 +207,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       message.includes('Chưa tới lượt') ||
       message.includes('BẠN_LÀ_KHÁN_GIẢ') ||
       message.includes('Ván đấu');
+    const isAuthError = message.toLowerCase().includes('xác thực') || message.toLowerCase().includes('authorization');
 
-    return res.status(isClientError ? 400 : 500).json({
+    return res.status(isAuthError ? 401 : isClientError ? 400 : 500).json({
       success: false,
       message,
     });

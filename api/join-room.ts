@@ -147,6 +147,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(404).json({ success: false, message: 'Phòng không tồn tại' });
     }
     const message = error instanceof Error ? error.message : 'Lỗi hệ thống';
-    return res.status(500).json({ success: false, message });
+    const isAuthError = message.toLowerCase().includes('xác thực') || message.toLowerCase().includes('authorization');
+    return res.status(isAuthError ? 401 : 500).json({ success: false, message });
   }
 }
