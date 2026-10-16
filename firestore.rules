@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Phong Chess Online - Quy tắc bảo mật Firestore
+    match /rooms/{roomId} {
+      // 1. Cho phép đọc dữ liệu phòng nếu người dùng đã xác thực (bao gồm cả Anonymous Sign-in)
+      // Giúp 2 người chơi và khán giả có thể đồng bộ bàn cờ trực tiếp qua onSnapshot
+      allow read: if request.auth != null;
+
+      // 2. TUYỆT ĐỐI KHÔNG CHO PHÉP CLIENT GHI TRỰC TIẾP VÀO FIRESTORE
+      // Mọi thao tác tạo phòng, gán ghế người chơi, thực hiện nước đi, hoặc đầu hàng
+      // bắt buộc phải đi qua Vercel API (sử dụng Firebase Admin SDK ở backend).
+      allow write: if false;
+    }
+  }
+}
