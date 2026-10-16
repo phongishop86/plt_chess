@@ -51,6 +51,9 @@ function getDb(): Firestore {
       });
     }
     db = getFirestore(app);
+    try {
+      db.settings({ ignoreUndefinedProperties: true });
+    } catch {}
   }
   return db;
 }
@@ -162,14 +165,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const now = Date.now();
-      const moveRecord = {
+      const moveRecord: {
+        from: string;
+        to: string;
+        promotion?: string;
+        san: string;
+        timestamp: number;
+        by: 'w' | 'b';
+      } = {
         from: move.from,
         to: move.to,
-        promotion: move.promotion,
         san: moveResult.san,
         timestamp: now,
         by: playerColor,
       };
+
+      if (move.promotion) {
+        moveRecord.promotion = move.promotion;
+      }
 
       const history = Array.isArray(room.history) ? [...room.history, moveRecord] : [moveRecord];
 

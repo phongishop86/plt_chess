@@ -28,10 +28,17 @@ async function fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Pr
     headers,
   });
 
-  const data = await response.json().catch(() => ({}));
+  let data: Record<string, any> = {};
+  const rawText = await response.text();
+  try {
+    data = JSON.parse(rawText);
+  } catch {
+    data = { message: rawText.length > 200 ? rawText.slice(0, 200) + '...' : rawText };
+  }
 
   if (!response.ok) {
-    throw new Error(data.message || `Lỗi yêu cầu máy chủ: ${response.status}`);
+    const errorMsg = data.message || `Lỗi yêu cầu máy chủ (Mã: ${response.status})`;
+    throw new Error(errorMsg);
   }
 
   return data as T;

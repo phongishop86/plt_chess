@@ -50,6 +50,9 @@ function getDb(): Firestore {
       });
     }
     db = getFirestore(app);
+    try {
+      db.settings({ ignoreUndefinedProperties: true });
+    } catch {}
   }
   return db;
 }
