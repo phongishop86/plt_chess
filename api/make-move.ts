@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type { Transaction } from 'firebase-admin/firestore';
 import { Chess } from 'chess.js';
-import { adminDb } from './_lib/firebase-admin.ts';
-import { authenticateRequest } from './_lib/auth.ts';
+import { adminDb } from './_lib/firebase-admin';
+import { authenticateRequest } from './_lib/auth';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {

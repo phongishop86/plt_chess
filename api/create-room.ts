@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
-import { adminDb } from './_lib/firebase-admin.ts';
-import { authenticateRequest } from './_lib/auth.ts';
+import { adminDb } from './_lib/firebase-admin';
+import { authenticateRequest } from './_lib/auth';
 
 const INITIAL_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
