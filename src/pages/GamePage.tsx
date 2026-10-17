@@ -47,12 +47,19 @@ export const GamePage: React.FC = () => {
   }, []);
 
   // 2. Lắng nghe cập nhật phòng thời gian thực qua Firestore onSnapshot
+  // Chỉ bắt đầu lắng nghe SAU KHI đã hoàn tất xác thực (currentUid != null)
+  // để tránh bị Firestore Security Rules từ chối quyền (Missing or insufficient permissions)
   useEffect(() => {
     if (!roomId || !db) {
       if (!db) {
         setError('Firebase Firestore chưa được kết nối. Vui lòng kiểm tra .env.');
         setLoading(false);
       }
+      return;
+    }
+
+    if (!currentUid) {
+      // Đang chờ xác thực ẩn danh hoàn tất...
       return;
     }
 
@@ -77,7 +84,7 @@ export const GamePage: React.FC = () => {
     );
 
     return () => unsubscribe();
-  }, [roomId]);
+  }, [roomId, currentUid]);
 
   // 3. Tự động nhận diện vai trò của người chơi (Trắng, Đen, hay Khán giả)
   const userRole = useMemo<'white' | 'black' | 'spectator'>(() => {
@@ -173,13 +180,21 @@ export const GamePage: React.FC = () => {
           </div>
           <h3 className="text-lg font-bold text-white mb-2">Đã xảy ra sự cố</h3>
           <p className="text-xs text-slate-400 mb-6">{error || 'Không có dữ liệu phòng.'}</p>
-          <a
-            href="/"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Quay lại trang chủ
-          </a>
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-colors"
+            >
+              Thử tải lại
+            </button>
+            <a
+              href="/"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Về trang chủ
+            </a>
+          </div>
         </div>
       </div>
     );
