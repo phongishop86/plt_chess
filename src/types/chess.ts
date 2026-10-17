@@ -24,6 +24,13 @@ export interface MoveRecord {
   by: PlayerColor;
 }
 
+export interface RoomClocks {
+  white: number;
+  black: number;
+  lastMoveTime: number;
+  timeLimit: number;
+}
+
 export interface RoomDocument {
   roomId: string;
   createdAt: number;
@@ -38,6 +45,7 @@ export interface RoomDocument {
   history: MoveRecord[];
   winner?: PlayerColor | 'draw' | null;
   resignedBy?: PlayerColor | null;
+  clocks?: RoomClocks;
   lastMove?: {
     from: string;
     to: string;

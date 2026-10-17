@@ -119,6 +119,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       winner: null,
       resignedBy: null,
       lastMove: null,
+      clocks: {
+        white: 600,
+        black: 600,
+        lastMoveTime: now,
+        timeLimit: 600,
+      },
     };
 
     await roomRef.set(newRoomData);

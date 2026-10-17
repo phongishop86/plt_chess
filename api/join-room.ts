@@ -127,6 +127,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         };
       }
 
+      const now = Date.now();
       transaction.update(roomRef, {
         'players.black': {
           uid: user.uid,
@@ -134,7 +135,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           connected: true,
         },
         status: 'in_progress',
-        updatedAt: Date.now(),
+        'clocks.lastMoveTime': now,
+        updatedAt: now,
       });
 
       return { role: 'black', message: 'Tham gia ghế Quân Đen thành công' };

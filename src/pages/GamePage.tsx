@@ -11,6 +11,8 @@ import { GameControls } from '../components/GameControls.tsx';
 import { GameOverModal } from '../components/GameOverModal.tsx';
 import { SpectatorBanner } from '../components/SpectatorBanner.tsx';
 import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { calculateMaterial } from '../lib/chess-material.ts';
+import { useChessClock } from '../hooks/useChessClock.ts';
 
 export const GamePage: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
@@ -200,6 +202,24 @@ export const GamePage: React.FC = () => {
     );
   }
 
+  // Tính toán lực lượng, chênh lệch điểm và danh sách quân bị bắt từ chuỗi FEN
+  const material = useMemo(() => calculateMaterial(room?.fen || ''), [room?.fen]);
+
+  // Đồng hồ cờ vua thời gian thực đếm ngược khi ván đấu diễn ra
+  const {
+    whiteFormatted,
+    blackFormatted,
+    isWhiteLowTime,
+    isBlackLowTime,
+    isWhiteTimeout,
+    isBlackTimeout,
+  } = useChessClock({
+    clocks: room?.clocks,
+    turn: room?.turn || 'w',
+    status: room?.status || 'waiting',
+    updatedAt: room?.updatedAt || Date.now(),
+  });
+
   const isPlayer = userRole === 'white' || userRole === 'black';
   const isPlayerTurn = 
     (room.turn === 'w' && userRole === 'white') ||
@@ -236,6 +256,11 @@ export const GamePage: React.FC = () => {
             player={topPlayerColor === 'w' ? room.players.white : room.players.black}
             isCurrentTurn={room.turn === topPlayerColor && room.status === 'in_progress'}
             isYou={(topPlayerColor === 'w' && userRole === 'white') || (topPlayerColor === 'b' && userRole === 'black')}
+            capturedPieces={topPlayerColor === 'w' ? material.capturedByWhite : material.capturedByBlack}
+            advantage={topPlayerColor === 'w' ? material.whiteAdvantage : material.blackAdvantage}
+            timeRemaining={topPlayerColor === 'w' ? whiteFormatted : blackFormatted}
+            isLowTime={topPlayerColor === 'w' ? isWhiteLowTime : isBlackLowTime}
+            isTimeout={topPlayerColor === 'w' ? isWhiteTimeout : isBlackTimeout}
           />
 
           {/* Bàn cờ trung tâm */}
@@ -255,6 +280,11 @@ export const GamePage: React.FC = () => {
             player={bottomPlayerColor === 'w' ? room.players.white : room.players.black}
             isCurrentTurn={room.turn === bottomPlayerColor && room.status === 'in_progress'}
             isYou={(bottomPlayerColor === 'w' && userRole === 'white') || (bottomPlayerColor === 'b' && userRole === 'black')}
+            capturedPieces={bottomPlayerColor === 'w' ? material.capturedByWhite : material.capturedByBlack}
+            advantage={bottomPlayerColor === 'w' ? material.whiteAdvantage : material.blackAdvantage}
+            timeRemaining={bottomPlayerColor === 'w' ? whiteFormatted : blackFormatted}
+            isLowTime={bottomPlayerColor === 'w' ? isWhiteLowTime : isBlackLowTime}
+            isTimeout={bottomPlayerColor === 'w' ? isWhiteTimeout : isBlackTimeout}
           />
         </div>
 

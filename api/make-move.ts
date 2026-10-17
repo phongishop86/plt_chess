@@ -186,12 +186,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const history = Array.isArray(room.history) ? [...room.history, moveRecord] : [moveRecord];
 
+      // Cập nhật đồng hồ thi đấu
+      const prevClocks = room.clocks || { white: 600, black: 600, lastMoveTime: room.updatedAt || now, timeLimit: 600 };
+      const elapsedSeconds = Math.max(0, Math.floor((now - (prevClocks.lastMoveTime || now)) / 1000));
+
+      const updatedClocks = {
+        white: playerColor === 'w' ? Math.max(0, prevClocks.white - elapsedSeconds) : prevClocks.white,
+        black: playerColor === 'b' ? Math.max(0, prevClocks.black - elapsedSeconds) : prevClocks.black,
+        lastMoveTime: now,
+        timeLimit: prevClocks.timeLimit || 600,
+      };
+
       transaction.update(roomRef, {
         fen: chess.fen(),
         turn: chess.turn(),
         history,
         status: newStatus,
         winner,
+        clocks: updatedClocks,
         lastMove: {
           from: move.from,
           to: move.to,

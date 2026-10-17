@@ -280,4 +280,33 @@ describe('Bộ kiểm thử Phong Chess Online (Rules, Security, Concurrency)', 
     expect(room.resignedBy).toBe('b');
     expect(room.winner).toBe('w'); // Bên Trắng thắng vì Đen đầu hàng
   });
+
+  it('14. Tính toán chính xác chênh lệch điểm (Material Score) và danh sách quân bị bắt', async () => {
+    const { calculateMaterial } = await import('../src/lib/chess-material.ts');
+
+    // Thế cờ ban đầu: 0 điểm chênh lệch, chưa có quân bị bắt
+    const initialMat = calculateMaterial('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+    expect(initialMat.diff).toBe(0);
+    expect(initialMat.whiteScore).toBe(39);
+    expect(initialMat.blackScore).toBe(39);
+    expect(initialMat.capturedByWhite.length).toBe(0);
+    expect(initialMat.capturedByBlack.length).toBe(0);
+
+    // Khi Trắng bắt được Hậu Đen và 1 Tốt Đen: Trắng dẫn trước +10 điểm
+    const queenCapture = calculateMaterial('rnb1kbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+    expect(queenCapture.diff).toBe(9);
+    expect(queenCapture.whiteAdvantage).toBe(9);
+    expect(queenCapture.blackAdvantage).toBe(0);
+    expect(queenCapture.capturedByWhite).toEqual(['q']);
+  });
+
+  it('15. Định dạng đồng hồ thi đấu (Format Time)', async () => {
+    const { formatTime } = await import('../src/hooks/useChessClock.ts');
+    expect(formatTime(600)).toBe('10:00');
+    expect(formatTime(585)).toBe('09:45');
+    expect(formatTime(45)).toBe('00:45');
+    expect(formatTime(5)).toBe('00:05');
+    expect(formatTime(0)).toBe('00:00');
+    expect(formatTime(-10)).toBe('00:00');
+  });
 });
