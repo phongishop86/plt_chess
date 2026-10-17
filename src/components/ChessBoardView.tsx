@@ -167,30 +167,37 @@ export const ChessBoardView: React.FC<ChessBoardViewProps> = ({
   );
 
   // Bộ quân cờ độ nét cao với hiệu ứng chiều sâu 3D (Drop Shadow) và độ tương phản tối ưu
-  const customPieces = useMemo<PieceRenderObject>(() => {
-    return Object.fromEntries(
-      Object.entries(defaultPieces).map(([key, pieceFn]) => {
-        const isWhite = key.startsWith('w');
-        return [
-          key,
-          (props?: { fill?: string; square?: string; svgStyle?: React.CSSProperties }) => {
-            const customSvgStyle: React.CSSProperties = {
-              ...props?.svgStyle,
-              filter: isWhite
-                ? 'drop-shadow(0 3px 4px rgba(0, 0, 0, 0.45)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25))'
-                : 'drop-shadow(0 3px 4px rgba(0, 0, 0, 0.65)) drop-shadow(0 1px 2px rgba(255, 255, 255, 0.2))',
-              transform: 'scale(1.05)',
-              transition: 'transform 0.15s ease',
-            };
-            return pieceFn({
-              ...props,
-              fill: isWhite ? '#ffffff' : '#262421',
-              svgStyle: customSvgStyle,
-            });
-          },
-        ];
-      })
-    );
+  const customPieces = useMemo<PieceRenderObject | undefined>(() => {
+    if (!defaultPieces || typeof defaultPieces !== 'object') {
+      return undefined;
+    }
+    try {
+      return Object.fromEntries(
+        Object.entries(defaultPieces).map(([key, pieceFn]) => {
+          const isWhite = key.startsWith('w');
+          return [
+            key,
+            (props?: { fill?: string; square?: string; svgStyle?: React.CSSProperties }) => {
+              const customSvgStyle: React.CSSProperties = {
+                ...props?.svgStyle,
+                filter: isWhite
+                  ? 'drop-shadow(0 3px 4px rgba(0, 0, 0, 0.45)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25))'
+                  : 'drop-shadow(0 3px 4px rgba(0, 0, 0, 0.65)) drop-shadow(0 1px 2px rgba(255, 255, 255, 0.2))',
+                transform: 'scale(1.05)',
+                transition: 'transform 0.15s ease',
+              };
+              return pieceFn({
+                ...props,
+                fill: isWhite ? '#ffffff' : '#262421',
+                svgStyle: customSvgStyle,
+              });
+            },
+          ];
+        })
+      );
+    } catch {
+      return undefined;
+    }
   }, []);
 
   // Tính styles tùy biến cho các ô: nước đi gần nhất, ô đang chọn, ô có thể đi, Vua bị chiếu
@@ -244,7 +251,7 @@ export const ChessBoardView: React.FC<ChessBoardViewProps> = ({
           position: fen,
           boardOrientation: orientation,
           allowDragging: canPlay && !isSubmitting,
-          pieces: customPieces,
+          ...(customPieces ? { pieces: customPieces } : {}),
           showNotation: true,
           darkSquareNotationStyle: { color: '#ebecd0', fontWeight: 'bold', fontSize: '11px' },
           lightSquareNotationStyle: { color: '#779952', fontWeight: 'bold', fontSize: '11px' },

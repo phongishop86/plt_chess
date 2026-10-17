@@ -96,6 +96,24 @@ export const GamePage: React.FC = () => {
     return 'spectator';
   }, [room, currentUid]);
 
+  // Tính toán lực lượng, chênh lệch điểm và danh sách quân bị bắt từ chuỗi FEN (phải gọi trước mọi return)
+  const material = useMemo(() => calculateMaterial(room?.fen || ''), [room?.fen]);
+
+  // Đồng hồ cờ vua thời gian thực đếm ngược khi ván đấu diễn ra (phải gọi trước mọi return)
+  const {
+    whiteFormatted,
+    blackFormatted,
+    isWhiteLowTime,
+    isBlackLowTime,
+    isWhiteTimeout,
+    isBlackTimeout,
+  } = useChessClock({
+    clocks: room?.clocks,
+    turn: room?.turn || 'w',
+    status: room?.status || 'waiting',
+    updatedAt: room?.updatedAt || Date.now(),
+  });
+
   // Cập nhật góc nhìn bàn cờ theo vai trò (Bên Đen nhìn từ phía Đen, Bên Trắng nhìn từ phía Trắng)
   useEffect(() => {
     if (userRole === 'black') {
@@ -201,24 +219,6 @@ export const GamePage: React.FC = () => {
       </div>
     );
   }
-
-  // Tính toán lực lượng, chênh lệch điểm và danh sách quân bị bắt từ chuỗi FEN
-  const material = useMemo(() => calculateMaterial(room?.fen || ''), [room?.fen]);
-
-  // Đồng hồ cờ vua thời gian thực đếm ngược khi ván đấu diễn ra
-  const {
-    whiteFormatted,
-    blackFormatted,
-    isWhiteLowTime,
-    isBlackLowTime,
-    isWhiteTimeout,
-    isBlackTimeout,
-  } = useChessClock({
-    clocks: room?.clocks,
-    turn: room?.turn || 'w',
-    status: room?.status || 'waiting',
-    updatedAt: room?.updatedAt || Date.now(),
-  });
 
   const isPlayer = userRole === 'white' || userRole === 'black';
   const isPlayerTurn = 
