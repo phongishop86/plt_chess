@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { PlayerColor, PlayerInfo } from '../types/chess.ts';
-import { Clock, AlertTriangle } from 'lucide-react';
+import { Clock, AlertTriangle, Pencil, Check, X, Loader2 } from 'lucide-react';
 import { PIECE_UNICODE } from '../lib/chess-material.ts';
 
 interface PlayerCardProps {
@@ -13,6 +13,7 @@ interface PlayerCardProps {
   timeRemaining?: string;
   isLowTime?: boolean;
   isTimeout?: boolean;
+  onUpdateName?: (newName: string) => Promise<void>;
 }
 
 export const PlayerCard: React.FC<PlayerCardProps> = ({
@@ -25,8 +26,33 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   timeRemaining = '10:00',
   isLowTime = false,
   isTimeout = false,
+  onUpdateName,
 }) => {
   const isWhite = color === 'w';
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleStartEdit = () => {
+    setEditValue(player?.name || (isWhite ? 'Người chơi Trắng' : 'Người chơi Đen'));
+    setIsEditing(true);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = editValue.trim().slice(0, 20);
+    if (!trimmed || isSaving || !onUpdateName) return;
+
+    try {
+      setIsSaving(true);
+      await onUpdateName(trimmed);
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Không thể cập nhật tên:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div
@@ -55,14 +81,60 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
           <div className="text-left min-w-0">
             {/* Player Name and Badges */}
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-bold text-sm text-white truncate max-w-[140px] sm:max-w-[200px]">
-                {player ? player.name : isWhite ? 'Quân Trắng' : 'Đang chờ đối thủ...'}
-              </span>
+              {isEditing ? (
+                <form onSubmit={handleSaveEdit} className="flex items-center gap-1">
+                  <input
+                    type="text"
+                    autoFocus
+                    maxLength={20}
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') setIsEditing(false);
+                    }}
+                    placeholder="Nhập tên..."
+                    className="bg-slate-950 border border-amber-500 rounded px-2 py-0.5 text-xs text-white outline-none w-28 sm:w-36 focus:ring-1 focus:ring-amber-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isSaving || !editValue.trim()}
+                    className="p-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500 hover:text-black transition-colors disabled:opacity-50"
+                    title="Lưu tên"
+                  >
+                    {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                    title="Hủy"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </form>
+              ) : (
+                <>
+                  <span className="font-bold text-sm text-white truncate max-w-[140px] sm:max-w-[200px]">
+                    {player ? player.name : isWhite ? 'Quân Trắng' : 'Đang chờ đối thủ...'}
+                  </span>
 
-              {isYou && (
-                <span className="text-[10px] uppercase font-extrabold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm">
-                  Bạn
-                </span>
+                  {isYou && (
+                    <span className="text-[10px] uppercase font-extrabold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm">
+                      Bạn
+                    </span>
+                  )}
+
+                  {isYou && onUpdateName && (
+                    <button
+                      type="button"
+                      onClick={handleStartEdit}
+                      className="p-1 rounded text-slate-400 hover:text-amber-400 hover:bg-slate-800 transition-colors"
+                      title="Đổi tên của bạn"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                  )}
+                </>
               )}
 
               {/* Advantage Badge (+ điểm) */}

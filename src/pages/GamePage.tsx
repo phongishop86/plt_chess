@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db, ensureAnonymousUser } from '../lib/firebase.ts';
-import { joinRoom, makeMove, resignGame, createRoom } from '../lib/api.ts';
+import { joinRoom, makeMove, resignGame, createRoom, updatePlayerName } from '../lib/api.ts';
 import type { RoomDocument } from '../types/chess.ts';
 import { ChessBoardView } from '../components/ChessBoardView.tsx';
 import { PlayerCard } from '../components/PlayerCard.tsx';
@@ -133,11 +133,24 @@ export const GamePage: React.FC = () => {
     // Nếu không phải là Trắng và ghế Đen đang trống -> Tham gia nhận ghế Đen
     if (!isWhite && !isBlack && !room.players.black && room.status === 'waiting') {
       setHasAttemptedJoin(true);
-      joinRoom(roomId).catch((err: unknown) => {
+      const savedName = localStorage.getItem('phong_chess_player_name') || undefined;
+      joinRoom(roomId, savedName).catch((err: unknown) => {
         console.warn('Không thể tự động tham gia ghế Đen:', err);
       });
     }
   }, [room, currentUid, roomId, hasAttemptedJoin]);
+
+  // Cập nhật tên người chơi trực tiếp từ bàn cờ
+  const handleUpdateName = useCallback(
+    async (newName: string) => {
+      if (!roomId) return;
+      const trimmed = newName.trim().slice(0, 20);
+      if (!trimmed) return;
+      localStorage.setItem('phong_chess_player_name', trimmed);
+      await updatePlayerName(roomId, trimmed);
+    },
+    [roomId]
+  );
 
   // Thực hiện nước đi qua Vercel API
   const handleMakeMove = useCallback(
@@ -172,7 +185,8 @@ export const GamePage: React.FC = () => {
 
   const handleNewGame = async () => {
     try {
-      const res = await createRoom();
+      const savedName = localStorage.getItem('phong_chess_player_name') || undefined;
+      const res = await createRoom(savedName);
       if (res.success && res.roomId) {
         navigate(`/game/${res.roomId}`);
       }
@@ -256,6 +270,7 @@ export const GamePage: React.FC = () => {
             player={topPlayerColor === 'w' ? room.players.white : room.players.black}
             isCurrentTurn={room.turn === topPlayerColor && room.status === 'in_progress'}
             isYou={(topPlayerColor === 'w' && userRole === 'white') || (topPlayerColor === 'b' && userRole === 'black')}
+            onUpdateName={(topPlayerColor === 'w' && userRole === 'white') || (topPlayerColor === 'b' && userRole === 'black') ? handleUpdateName : undefined}
             capturedPieces={topPlayerColor === 'w' ? material.capturedByWhite : material.capturedByBlack}
             advantage={topPlayerColor === 'w' ? material.whiteAdvantage : material.blackAdvantage}
             timeRemaining={topPlayerColor === 'w' ? whiteFormatted : blackFormatted}
@@ -280,6 +295,7 @@ export const GamePage: React.FC = () => {
             player={bottomPlayerColor === 'w' ? room.players.white : room.players.black}
             isCurrentTurn={room.turn === bottomPlayerColor && room.status === 'in_progress'}
             isYou={(bottomPlayerColor === 'w' && userRole === 'white') || (bottomPlayerColor === 'b' && userRole === 'black')}
+            onUpdateName={(bottomPlayerColor === 'w' && userRole === 'white') || (bottomPlayerColor === 'b' && userRole === 'black') ? handleUpdateName : undefined}
             capturedPieces={bottomPlayerColor === 'w' ? material.capturedByWhite : material.capturedByBlack}
             advantage={bottomPlayerColor === 'w' ? material.whiteAdvantage : material.blackAdvantage}
             timeRemaining={bottomPlayerColor === 'w' ? whiteFormatted : blackFormatted}
@@ -309,6 +325,8 @@ export const GamePage: React.FC = () => {
         winner={room.winner}
         resignedBy={room.resignedBy}
         userRole={userRole}
+        whiteName={room.players.white.name}
+        blackName={room.players.black?.name}
         onNewGame={handleNewGame}
       />
     </div>

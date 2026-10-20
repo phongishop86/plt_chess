@@ -57,6 +57,23 @@ class MockGameServer {
     return { success: true, role: 'black' };
   }
 
+  updatePlayerName(roomId: string, uid: string, name: string): { success: boolean; name: string } {
+    const room = this.rooms.get(roomId);
+    if (!room) throw new Error('ROOM_NOT_FOUND');
+    const cleanName = name.trim().slice(0, 20);
+    if (!cleanName) throw new Error('NAME_EMPTY');
+
+    if (room.players.white.uid === uid) {
+      room.players.white.name = cleanName;
+    } else if (room.players.black?.uid === uid) {
+      room.players.black.name = cleanName;
+    } else {
+      throw new Error('NOT_IN_ROOM');
+    }
+    room.updatedAt = Date.now();
+    return { success: true, name: cleanName };
+  }
+
   makeMove(
     roomId: string,
     uid: string,
@@ -308,5 +325,25 @@ describe('Bộ kiểm thử Phong Chess Online (Rules, Security, Concurrency)', 
     expect(formatTime(5)).toBe('00:05');
     expect(formatTime(0)).toBe('00:00');
     expect(formatTime(-10)).toBe('00:00');
+  });
+
+  it('16. Hỗ trợ đặt và đổi tên người chơi Trắng / Đen trực quan', () => {
+    const nameRoomId = 'room-name-test';
+    const room = server.createRoom(nameRoomId, P1_WHITE);
+    expect(room.players.white.name).toBe('Người chơi Trắng');
+
+    // Đổi tên người chơi Trắng
+    server.updatePlayerName(nameRoomId, P1_WHITE, 'Kỳ Thủ Phong');
+    expect(server.rooms.get(nameRoomId)!.players.white.name).toBe('Kỳ Thủ Phong');
+
+    // Người chơi Đen tham gia và đổi tên
+    server.joinRoom(nameRoomId, P2_BLACK);
+    server.updatePlayerName(nameRoomId, P2_BLACK, 'Đại Sư Cờ');
+    expect(server.rooms.get(nameRoomId)!.players.black!.name).toBe('Đại Sư Cờ');
+
+    // Người thứ ba hoặc người không ở trong phòng không được phép đổi tên
+    expect(() => {
+      server.updatePlayerName(nameRoomId, P3_SPECTATOR, 'Kẻ Mạo Danh');
+    }).toThrowError('NOT_IN_ROOM');
   });
 });

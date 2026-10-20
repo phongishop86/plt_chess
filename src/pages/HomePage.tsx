@@ -1,21 +1,29 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Crown, ArrowRight, ShieldCheck, Zap, Sparkles, AlertCircle } from 'lucide-react';
+import { Crown, ArrowRight, ShieldCheck, Zap, Sparkles, AlertCircle, User } from 'lucide-react';
 import { createRoom } from '../lib/api.ts';
 import { isFirebaseConfigured, missingKeys } from '../lib/firebase.ts';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const [roomIdInput, setRoomIdInput] = useState('');
+  const [playerName, setPlayerName] = useState(() => {
+    return localStorage.getItem('phong_chess_player_name') || '';
+  });
   const [isCreating, setIsCreating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handlePlayerNameChange = (name: string) => {
+    setPlayerName(name);
+    localStorage.setItem('phong_chess_player_name', name);
+  };
 
   const handleCreateRoom = async () => {
     try {
       setIsCreating(true);
       setErrorMessage(null);
 
-      const res = await createRoom();
+      const res = await createRoom(playerName.trim() || undefined);
       if (res.success && res.roomId) {
         navigate(`/game/${res.roomId}`);
       } else {
@@ -88,6 +96,25 @@ export const HomePage: React.FC = () => {
         )}
 
         <div className="space-y-4">
+          {/* Tên người chơi */}
+          <div className="text-left bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-amber-400">
+                <User className="w-3.5 h-3.5" />
+                Tên hiển thị của bạn
+              </span>
+              <span className="text-[10px] text-slate-500 font-normal">Tối đa 20 ký tự</span>
+            </label>
+            <input
+              type="text"
+              maxLength={20}
+              placeholder="Nhập tên của bạn (ví dụ: Phong, Kiệt, Đại sư...)"
+              value={playerName}
+              onChange={(e) => handlePlayerNameChange(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-700 focus:border-amber-500 rounded-lg px-3 py-2 text-xs sm:text-sm text-white placeholder-slate-500 outline-none transition-colors"
+            />
+          </div>
+
           <button
             onClick={handleCreateRoom}
             disabled={isCreating}

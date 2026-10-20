@@ -92,3 +92,9 @@ export interface ResignResponse {
   success: boolean;
   message?: string;
 }
+
+export interface UpdatePlayerNameResponse {
+  success: boolean;
+  message?: string;
+  name?: string;
+}

@@ -95,6 +95,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const user = await authenticateRequest(req);
+    const { playerName } = req.body || {};
+    const cleanName = typeof playerName === 'string' && playerName.trim()
+      ? playerName.trim().slice(0, 20)
+      : 'Người chơi Trắng';
+
     const adminDb = getDb();
     const roomId = crypto.randomBytes(4).toString('hex').slice(0, 7);
     const roomRef = adminDb.collection('rooms').doc(roomId);
@@ -108,7 +113,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       players: {
         white: {
           uid: user.uid,
-          name: 'Người chơi Trắng',
+          name: cleanName,
           connected: true,
         },
         black: null,

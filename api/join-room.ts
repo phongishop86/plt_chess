@@ -93,11 +93,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const user = await authenticateRequest(req);
-    const { roomId } = req.body || {};
+    const { roomId, playerName } = req.body || {};
 
     if (!roomId || typeof roomId !== 'string') {
       return res.status(400).json({ success: false, message: 'Thiếu mã phòng (roomId)' });
     }
+
+    const cleanName = typeof playerName === 'string' && playerName.trim()
+      ? playerName.trim().slice(0, 20)
+      : undefined;
 
     const adminDb = getDb();
     const roomRef = adminDb.collection('rooms').doc(roomId.trim());
@@ -113,10 +117,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const blackUid = data.players?.black?.uid;
 
       if (whiteUid === user.uid) {
+        if (cleanName && data.players?.white?.name !== cleanName) {
+          transaction.update(roomRef, {
+            'players.white.name': cleanName,
+            updatedAt: Date.now(),
+          });
+        }
         return { role: 'white', message: 'Bạn là người chơi Trắng' };
       }
 
       if (blackUid === user.uid) {
+        if (cleanName && data.players?.black?.name !== cleanName) {
+          transaction.update(roomRef, {
+            'players.black.name': cleanName,
+            updatedAt: Date.now(),
+          });
+        }
         return { role: 'black', message: 'Bạn là người chơi Đen' };
       }
 
@@ -128,10 +144,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const now = Date.now();
+      const blackName = cleanName || 'Người chơi Đen';
       transaction.update(roomRef, {
         'players.black': {
           uid: user.uid,
-          name: 'Người chơi Đen',
+          name: blackName,
           connected: true,
         },
         status: 'in_progress',

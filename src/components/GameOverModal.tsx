@@ -9,6 +9,8 @@ interface GameOverModalProps {
   winner?: PlayerColor | 'draw' | null;
   resignedBy?: PlayerColor | null;
   userRole: 'white' | 'black' | 'spectator';
+  whiteName?: string;
+  blackName?: string;
   onNewGame: () => void;
 }
 
@@ -17,6 +19,8 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   winner,
   resignedBy,
   userRole,
+  whiteName,
+  blackName,
   onNewGame,
 }) => {
   const isGameOver = ['checkmate', 'draw', 'resigned', 'stalemate', 'abandoned'].includes(status);
@@ -51,15 +55,18 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
   if (!isGameOver) return null;
 
+  const wLabel = whiteName ? `Bên Trắng (${whiteName})` : 'Quân Trắng';
+  const bLabel = blackName ? `Bên Đen (${blackName})` : 'Quân Đen';
+
   let title = 'Ván đấu kết thúc';
   let subtitle = '';
 
   if (status === 'checkmate') {
     title = 'Chiếu Bí!';
-    subtitle = winner === 'w' ? 'Quân Trắng giành chiến thắng áp đảo.' : 'Quân Đen giành chiến thắng áp đảo.';
+    subtitle = winner === 'w' ? `${wLabel} giành chiến thắng áp đảo.` : `${bLabel} giành chiến thắng áp đảo.`;
   } else if (status === 'resigned') {
     title = 'Đối thủ đầu hàng';
-    subtitle = resignedBy === 'w' ? 'Quân Trắng đã xin hàng.' : 'Quân Đen đã xin hàng.';
+    subtitle = resignedBy === 'w' ? `${wLabel} đã xin đầu hàng.` : `${bLabel} đã xin đầu hàng.`;
   } else if (status === 'stalemate') {
     title = 'Hòa Cờ (Pat)';
     subtitle = 'Đối phương không còn nước đi hợp lệ nào mà không bị chiếu.';

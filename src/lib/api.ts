@@ -3,7 +3,8 @@ import type {
   CreateRoomResponse, 
   JoinRoomResponse, 
   MakeMoveResponse, 
-  ResignResponse 
+  ResignResponse,
+  UpdatePlayerNameResponse
 } from '../types/chess.ts';
 
 const API_BASE = '/api';
@@ -47,20 +48,30 @@ async function fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Pr
 /**
  * Tạo phòng cờ mới (Người tạo tự động nhận ghế quân Trắng)
  */
-export async function createRoom(): Promise<CreateRoomResponse> {
+export async function createRoom(playerName?: string): Promise<CreateRoomResponse> {
   return fetchWithAuth<CreateRoomResponse>('/create-room', {
     method: 'POST',
-    body: JSON.stringify({}),
+    body: JSON.stringify({ playerName }),
   });
 }
 
 /**
  * Tham gia phòng cờ (Nếu ghế Đen trống -> nhận ghế Đen; nếu đủ 2 người -> khán giả)
  */
-export async function joinRoom(roomId: string): Promise<JoinRoomResponse> {
+export async function joinRoom(roomId: string, playerName?: string): Promise<JoinRoomResponse> {
   return fetchWithAuth<JoinRoomResponse>('/join-room', {
     method: 'POST',
-    body: JSON.stringify({ roomId }),
+    body: JSON.stringify({ roomId, playerName }),
+  });
+}
+
+/**
+ * Cập nhật tên hiển thị của người chơi
+ */
+export async function updatePlayerName(roomId: string, name: string): Promise<UpdatePlayerNameResponse> {
+  return fetchWithAuth<UpdatePlayerNameResponse>('/update-player-name', {
+    method: 'POST',
+    body: JSON.stringify({ roomId, name }),
   });
 }
 
